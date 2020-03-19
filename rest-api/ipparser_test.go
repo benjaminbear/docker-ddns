@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dyndns/ipparser"
+	"ipparser"
 	"testing"
 )
 

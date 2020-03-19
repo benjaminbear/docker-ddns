@@ -1,138 +1,67 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
-	"os/exec"
 
-	"github.com/gorilla/mux"
+	"github.com/benjaminbear/docker-ddns/rest-api/handler"
+	"github.com/foolin/goview/supports/echoview"
+	"github.com/go-playground/validator/v10"
+
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+	"github.com/labstack/gommon/log"
 )
 
-var appConfig = &Config{}
-
 func main() {
-	appConfig.LoadConfig("/etc/dyndns.json")
+	e := echo.New()
 
-	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/update", Update).Methods("GET")
+	e.Logger.SetLevel(log.ERROR)
 
-	/* DynDNS compatible handlers. Most routers will invoke /nic/update */
-	router.HandleFunc("/nic/update", DynUpdate).Methods("GET")
-	router.HandleFunc("/v2/update", DynUpdate).Methods("GET")
-	router.HandleFunc("/v3/update", DynUpdate).Methods("GET")
+	e.Use(middleware.Logger())
 
-	log.Println(fmt.Sprintf("Serving dyndns REST services on 0.0.0.0:8080..."))
-	log.Fatal(http.ListenAndServe(":8080", router))
-}
+	// Set Renderer
+	e.Renderer = echoview.Default()
 
-func DynUpdate(w http.ResponseWriter, r *http.Request) {
-	extractor := RequestDataExtractor{
-		Address: func(r *http.Request) string { return r.URL.Query().Get("myip") },
-		Secret: func(r *http.Request) string {
-			_, sharedSecret, ok := r.BasicAuth()
-			if !ok || sharedSecret == "" {
-				sharedSecret = r.URL.Query().Get("password")
-			}
+	// Set Validator
+	e.Validator = &handler.CustomValidator{Validator: validator.New()}
 
-			return sharedSecret
-		},
-		Domain: func(r *http.Request) string { return r.URL.Query().Get("hostname") },
+	// Set Statics
+	e.Static("/static", "static")
+
+	// Initialize handler
+	h := &handler.Handler{}
+
+	// Database connection
+	if err := h.InitDB(); err != nil {
+		e.Logger.Fatal(err)
 	}
-	response := BuildWebserviceResponseFromRequest(r, appConfig, extractor)
+	defer h.DB.Close()
 
-	if response.Success == false {
-		if response.Message == "Domain not set" {
-			w.Write([]byte("notfqdn\n"))
-		} else {
-			w.Write([]byte("badauth\n"))
-		}
-		return
+	if err := h.ParseEnvs(); err != nil {
+		e.Logger.Fatal(err)
 	}
 
-	for _, domain := range response.Domains {
-		result := UpdateRecord(domain, response.Address, response.AddrType)
+	e.Use(middleware.BasicAuth(h.Authenticate))
 
-		if result != "" {
-			response.Success = false
-			response.Message = result
+	// UI Routes
+	e.GET("/", func(c echo.Context) error {
+		//render with master
+		return c.Render(http.StatusOK, "index", nil)
+	})
 
-			w.Write([]byte("dnserr\n"))
-			return
-		}
-	}
+	e.GET("/hosts/add", h.AddHost)
+	e.GET("/hosts/edit/:id", h.EditHost)
+	e.GET("/hosts", h.ListHosts)
+	e.GET("/logs", h.ShowLogs)
+	e.GET("/logs/host/:id", h.ShowHostLogs)
 
-	response.Success = true
-	response.Message = fmt.Sprintf("Updated %s record for %s to IP address %s", response.AddrType, response.Domain, response.Address)
+	// Rest Routes
+	e.POST("/hosts/add", h.CreateHost)
+	e.POST("/hosts/edit/:id", h.UpdateHost)
+	e.GET("/hosts/delete/:id", h.DeleteHost)
+	e.GET("/update", h.UpdateIP)
 
-	w.Write([]byte(fmt.Sprintf("good %s\n", response.Address)))
-}
-
-func Update(w http.ResponseWriter, r *http.Request) {
-	extractor := RequestDataExtractor{
-		Address: func(r *http.Request) string { return r.URL.Query().Get("addr") },
-		Secret:  func(r *http.Request) string { return r.URL.Query().Get("secret") },
-		Domain:  func(r *http.Request) string { return r.URL.Query().Get("domain") },
-	}
-	response := BuildWebserviceResponseFromRequest(r, appConfig, extractor)
-
-	if response.Success == false {
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	for _, domain := range response.Domains {
-		result := UpdateRecord(domain, response.Address, response.AddrType)
-
-		if result != "" {
-			response.Success = false
-			response.Message = result
-
-			json.NewEncoder(w).Encode(response)
-			return
-		}
-	}
-
-	response.Success = true
-	response.Message = fmt.Sprintf("Updated %s record for %s to IP address %s", response.AddrType, response.Domain, response.Address)
-
-	json.NewEncoder(w).Encode(response)
-}
-
-func UpdateRecord(domain string, ipaddr string, addrType string) string {
-	log.Println(fmt.Sprintf("%s record update request: %s -> %s", addrType, domain, ipaddr))
-
-	f, err := ioutil.TempFile(os.TempDir(), "dyndns")
-	if err != nil {
-		return err.Error()
-	}
-
-	defer os.Remove(f.Name())
-	w := bufio.NewWriter(f)
-
-	w.WriteString(fmt.Sprintf("server %s\n", appConfig.Server))
-	w.WriteString(fmt.Sprintf("zone %s\n", appConfig.Zone))
-	w.WriteString(fmt.Sprintf("update delete %s.%s %s\n", domain, appConfig.Domain, addrType))
-	w.WriteString(fmt.Sprintf("update add %s.%s %v %s %s\n", domain, appConfig.Domain, appConfig.RecordTTL, addrType, ipaddr))
-	w.WriteString("send\n")
-
-	w.Flush()
-	f.Close()
-
-	cmd := exec.Command(appConfig.NsupdateBinary, f.Name())
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		return err.Error() + ": " + stderr.String()
-	}
-
-	return out.String()
+	// Start server
+	e.Logger.Fatal(e.Start(":8080"))
 }

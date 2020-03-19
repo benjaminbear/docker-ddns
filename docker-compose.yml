@@ -1,7 +1,7 @@
 version: '3'
 services:
   ddns:
-    image: davd/docker-ddns:latest
+    image: bbaerthlein/docker-ddns:latest
     #image: davd/docker-ddns:develop
     #build: .
     restart: always
@@ -15,3 +15,4 @@ services:
       - "8080:8080"
 #    volumes:
 #       - ./bind-data:/var/cache/bind
+#       - ./database://root/dyndns/database
