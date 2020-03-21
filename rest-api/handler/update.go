@@ -176,9 +176,6 @@ func isPrivateSubnet(ipAddress net.IP) bool {
 
 func shrinkUserAgent(agent string) string {
 	agentParts := strings.Split(agent, " ")
-	if len(agentParts) > 1 {
-		return strings.Join(agentParts[:2], " ")
-	} else {
-		return agent
-	}
+
+	return agentParts[0]
 }

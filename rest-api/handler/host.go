@@ -171,17 +171,12 @@ func (h *Handler) DeleteHost(c echo.Context) (err error) {
 		return c.JSON(http.StatusBadRequest, &Error{err.Error()})
 	}
 
-	logs := new([]model.Log)
-	if err = h.DB.Where(&model.Log{HostID: uint(id)}).Find(logs).Error; err != nil {
-		return c.JSON(http.StatusBadRequest, &Error{err.Error()})
-	}
-
 	err = h.DB.Transaction(func(tx *gorm.DB) error {
-		if err = h.DB.Unscoped().Delete(host).Error; err != nil {
+		if err = tx.Unscoped().Delete(host).Error; err != nil {
 			return c.JSON(http.StatusBadRequest, &Error{err.Error()})
 		}
 
-		if err = h.DB.Delete(logs).Error; err != nil {
+		if err = tx.Where(&model.Log{HostID: uint(id)}).Delete(&model.Log{}).Error; err != nil {
 			return c.JSON(http.StatusBadRequest, &Error{err.Error()})
 		}
 
@@ -206,15 +201,6 @@ func (h *Handler) UpdateIP(c echo.Context) (err error) {
 	log := &model.Log{Status: false, Host: *h.AuthHost, TimeStamp: time.Now(), UserAgent: shrinkUserAgent(c.Request().UserAgent())}
 	log.SentIP = c.QueryParam(("myip"))
 
-	hostname := c.QueryParam("hostname")
-	if hostname == "" || hostname != h.AuthHost.Hostname+"."+h.Config.Domain {
-		if err = h.CreateLogEntry(log); err != nil {
-			fmt.Println(err)
-		}
-
-		return c.String(http.StatusBadRequest, "notfqdn\n")
-	}
-
 	// Get caller IP
 	log.CallerIP, err = getCallerIP(c.Request())
 	if log.CallerIP == "" {
@@ -226,6 +212,16 @@ func (h *Handler) UpdateIP(c echo.Context) (err error) {
 
 			return c.String(http.StatusBadRequest, "badrequest\n")
 		}
+	}
+
+	// Validate hostname
+	hostname := c.QueryParam("hostname")
+	if hostname == "" || hostname != h.AuthHost.Hostname+"."+h.Config.Domain {
+		if err = h.CreateLogEntry(log); err != nil {
+			fmt.Println(err)
+		}
+
+		return c.String(http.StatusBadRequest, "notfqdn\n")
 	}
 
 	// Get IP type
