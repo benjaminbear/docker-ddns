@@ -74,3 +74,10 @@ function generateUsername() {
 function generatePassword() {
     edithostform.password.value = randomHash();
 }
+
+function copyToClipboard(inputId) {
+    var copyText = document.getElementById(inputId);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+}

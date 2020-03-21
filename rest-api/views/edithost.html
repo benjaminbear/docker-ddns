@@ -36,7 +36,10 @@
                 <div class="col-1"></div>
                 <div class="col-2 text-right">Username:</div>
                 <div class="col-8 input-group">
-                    <input type="text" class="form-control" placeholder="Enter username" name="username" value="{{.host.UserName}}">
+                    <div class="input-group-prepend">
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('username')"><img src="/static/icons/clipboard.svg" style="vertical-align: baseline" alt="" width="16" height="16" title="Copy"></button>
+                    </div>
+                    <input type="text" class="form-control" placeholder="Enter username" name="username" id="username" value="{{.host.UserName}}">
                     <div class="input-group-append">
                         <button class="btn btn-outline-secondary" type="button" onclick="generateUsername()">Generate</button>
                     </div>
@@ -47,7 +50,10 @@
                 <div class="col-1"></div>
                 <div class="col-2 text-right">Password:</div>
                 <div class="col-8 input-group">
-                    <input type="text" class="form-control" placeholder="Enter password" name="password" value="{{.host.Password}}">
+                    <div class="input-group-prepend">
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('password')"><img src="/static/icons/clipboard.svg" style="vertical-align: baseline" alt="" width="16" height="16" title="Copy"></button>
+                    </div>
+                    <input type="text" class="form-control" placeholder="Enter password" name="password" id="password" value="{{.host.Password}}">
                     <div class="input-group-append">
                         <button class="btn btn-outline-secondary" type="button" onclick="generatePassword()">Generate</button>
                     </div>
