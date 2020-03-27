@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/benjaminbear/docker-ddns/rest-api/ipparser"
+	"github.com/benjaminbear/docker-ddns/dyndns/ipparser"
 	"io/ioutil"
 	"net"
 	"net/http"

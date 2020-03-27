@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fmt"
-	"github.com/benjaminbear/docker-ddns/rest-api/model"
+	"github.com/benjaminbear/docker-ddns/dyndns/model"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"net"

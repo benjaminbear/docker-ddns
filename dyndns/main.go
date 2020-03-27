@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/benjaminbear/docker-ddns/rest-api/handler"
+	"github.com/benjaminbear/docker-ddns/dyndns/handler"
 	"github.com/foolin/goview/supports/echoview"
 	"github.com/go-playground/validator/v10"
 

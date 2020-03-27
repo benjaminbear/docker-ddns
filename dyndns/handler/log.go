@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/benjaminbear/docker-ddns/rest-api/model"
+	"github.com/benjaminbear/docker-ddns/dyndns/model"
 	"github.com/labstack/echo"
 	"net/http"
 	"strconv"
