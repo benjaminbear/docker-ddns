@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/benjaminbear/docker-ddns/dyndns/model"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
 )

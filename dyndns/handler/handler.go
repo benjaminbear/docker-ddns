@@ -5,7 +5,7 @@ import (
 	"github.com/benjaminbear/docker-ddns/dyndns/model"
 	"github.com/go-playground/validator/v10"
 	"github.com/jinzhu/gorm"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/tg123/go-htpasswd"
 	"os"
 	"strings"

@@ -4,12 +4,12 @@ import (
 	"net/http"
 
 	"github.com/benjaminbear/docker-ddns/dyndns/handler"
-	"github.com/foolin/goview/supports/echoview"
+	"github.com/foolin/goview/supports/echoview-v4"
 	"github.com/go-playground/validator/v10"
 
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 )
 
